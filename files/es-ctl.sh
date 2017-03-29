@@ -21,6 +21,10 @@ use() {
     echo "    options: [--safe-mode] NAME1 ... NAMEn"
     echo "      --safe-mode : Apply only if index does not exists"
     echo '      NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/${NAME}_schema.json'
+    echo "  create-all : create all indexes infering name of index from Schmema file name."
+    echo '    All flies which path follow /etc/es-ctl/${NAME}_schema.json pattern, will used to create index.'
+    echo "    options: [--safe-mode]"
+    echo "      --safe-mode : Apply only if index does not exists"
     echo "  delete-idxs : delte multiple index"
     echo "    options: [--force] NAME1 ... NAMEn"
     echo "      --force : Do not ask for confirmation"
@@ -56,14 +60,14 @@ create_index() {
 
   if [ "yes" == "${safe_mode}" ]
   then
-    if list_indexes | awk '{print $3}' | fgrep ${index_name}
+    if list_indexes | awk '{print $3}' | fgrep ${index_name} > /dev/null
     then
       echo "Index ${index_name} exists, ignoring"
     else
       curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>/tmp/output_error  || cat /tmp/output_error
     fi
   else
-    curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}"
+    curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>/tmp/output_error  || cat /tmp/output_error
   fi
 }
 
@@ -78,6 +82,23 @@ create_indexes(){
   while [ -n "$1" ]
   do
     create_index "$1" "${safe_mode}"
+    echo ""
+    shift
+  done
+}
+
+create_all(){
+  local index_names=$(list_schemas | egrep -ve "~|Assumed" | awk '{print $1}' | xargs echo)
+  local safe_mode=""
+  if [ "$1" == "--safe-mode" ]
+  then
+    safe_mode=$1
+    shift
+  fi
+
+  for name in $index_names
+  do
+    create_index "$name" "${safe_mode}"
     echo ""
     shift
   done
@@ -131,6 +152,10 @@ case $1 in
   create-idxs)
     shift
     create_indexes $@
+    ;;
+  create-all)
+    shift
+    create_all $@
     ;;
   delete-idx)
     shift
