@@ -5,22 +5,26 @@ set -e
 ES_ENTRY_POINT="${ES_ENTRY_POINT:-http://elastic-search:9200}"
 
 use() {
-    echo "es-ctl list-schms|list-idxs|remove-idx|create-idx [options]"
+    echo "es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options}"
     echo "  list-schms : list allowed schema configuration files"
     echo "  list-idxs : list all idexes"
     echo "  delete-idx : delete a index"
     echo "    options: NAME"
     echo "      NAME : the name of index to remove"
     echo "  create-idx : create a index"
-    echo "    options: NAME [SCHEMA_PATH]"
+    echo "    options: NAME [--safe-mode] [SCHEMA_PATH]"
     echo "      NAME : the name of the index to create"
+    echo "      --safe-mode : Apply only if index does not exists"
     echo "      SCHEMA_PATH : json file wiht schema definition. If not defined"
     echo '        /etc/es-ctl/${NAME}_schema.json will be used'
-
+    echo "  create-idxs : create multiple index"
+    echo "    options: [--safe-mode] NAME1 ... NAMEn"
+    echo "      --safe-mode : Apply only if index does not exists"
+    echo '      NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/${NAME}_schema.json'
 }
 
 list_indexes() {
-  curl "${ES_ENTRY_POINT}/_cat/indices?v"
+  curl "${ES_ENTRY_POINT}/_cat/indices?v" 2>/tmp/output_error || cat /tmp/output_error
 }
 
 delete_index() {
@@ -28,17 +32,60 @@ delete_index() {
 }
 
 create_index() {
-  schema_path="/etc/es-ctl/$1_schema.json"
-  if [ ! -z "$2" ]
+  local index_name=$1
+  shift
+  local schema_path="/etc/es-ctl/${index_name}_schema.json"
+  local safe_mode="no"
+
+  while [ -n "$1" ]
+  do
+    case $1 in
+      --safe-mode)
+        safe_mode="yes"
+        ;;
+      *)
+        schema_path="$1"
+        ;;
+    esac
+    shift
+  done
+
+  if [ "yes" == "${safe_mode}" ]
   then
-    schema_path="$2"
+    if list_indexes | awk '{print $3}' | fgrep ${index_name}
+    then
+      echo "Index ${index_name} exists, ignoring"
+    else
+      curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>/tmp/output_error  || cat /tmp/output_error
+    fi
+  else
+    curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}"
+  fi
+}
+
+create_indexes(){
+  local safe_mode=""
+  if [ "$1" == "--safe-mode" ]
+  then
+    safe_mode=$1
+    shift
   fi
 
-  curl -XPUT "${ES_ENTRY_POINT}/$1" -d "@${schema_path}"
+  while [ -n "$1" ]
+  do
+    create_index "$1" "${safe_mode}"
+    shift
+  done
 }
 
 list_schemas() {
-  ls -1 /etc/es-ctl
+  printf "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+  printf " %-30s | %s\n" "Assumed Index Name" "File"
+  printf "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+  ls -1 /etc/es-ctl | while read l; do
+    local indexName=$(echo $l | sed 's/_schema\.json//')
+    printf " %-30s | %s\n" "$indexName" "/etc/es-ctl/$l"
+  done
 }
 
 
@@ -49,6 +96,10 @@ case $1 in
   create-idx)
     shift
     create_index $@
+    ;;
+  create-idxs)
+    shift
+    create_indexes $@
     ;;
   delete-idx)
     shift
