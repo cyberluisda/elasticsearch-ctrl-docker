@@ -16,19 +16,19 @@ use() {
     echo "      NAME : the name of the index to create"
     echo "      --safe-mode : Apply only if index does not exists"
     echo "      SCHEMA_PATH : json file wiht schema definition. If not defined"
-    echo '        /etc/es-ctl/${NAME}_schema.json will be used'
+    echo '        /etc/es-ctl/${NAME}.es.schema.json will be used'
     echo "  create-idxs : create multiple index"
     echo "    options: [--safe-mode] NAME1 ... NAMEn"
     echo "      --safe-mode : Apply only if index does not exists"
-    echo '      NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/${NAME}_schema.json'
+    echo '      NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/${NAME}.es.schema.json'
     echo "  create-all : create all indexes infering name of index from Schmema file name."
-    echo '    All flies which path follow /etc/es-ctl/${NAME}_schema.json pattern, will used to create index.'
+    echo '    All flies which path follow /etc/es-ctl/${NAME}.es.schema.json pattern, will used to create index.'
     echo "    options: [--safe-mode]"
     echo "      --safe-mode : Apply only if index does not exists"
     echo "  delete-idxs : delte multiple index"
     echo "    options: [--force] NAME1 ... NAMEn"
     echo "      --force : Do not ask for confirmation"
-    echo '      NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/${NAME}_schema.json'
+    echo '      NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/${NAME}.es.schema.json'
 }
 
 list_indexes() {
@@ -42,7 +42,7 @@ delete_index() {
 create_index() {
   local index_name=$1
   shift
-  local schema_path="/etc/es-ctl/${index_name}_schema.json"
+  local schema_path="/etc/es-ctl/${index_name}.es.schema.json"
   local safe_mode="no"
 
   while [ -n "$1" ]
@@ -135,7 +135,7 @@ list_schemas() {
   printf " %-30s | %s\n" "Assumed Index Name" "File"
   printf "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
   ls -1 /etc/es-ctl | while read l; do
-    local indexName=$(echo $l | sed 's/_schema\.json//')
+    local indexName=$(echo $l | sed 's/\.es\.schema\.json//')
     printf " %-30s | %s\n" "$indexName" "/etc/es-ctl/$l"
   done
 }
