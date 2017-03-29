@@ -21,6 +21,10 @@ use() {
     echo "    options: [--safe-mode] NAME1 ... NAMEn"
     echo "      --safe-mode : Apply only if index does not exists"
     echo '      NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/${NAME}_schema.json'
+    echo "  delete-idxs : delte multiple index"
+    echo "    options: [--force] NAME1 ... NAMEn"
+    echo "      --force : Do not ask for confirmation"
+    echo '      NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/${NAME}_schema.json'
 }
 
 list_indexes() {
@@ -28,7 +32,7 @@ list_indexes() {
 }
 
 delete_index() {
-  curl -XDELETE "${ES_ENTRY_POINT}/$1"
+  curl -XDELETE "${ES_ENTRY_POINT}/$1" 2>/tmp/output_error || cat /tmp/output_error
 }
 
 create_index() {
@@ -74,6 +78,33 @@ create_indexes(){
   while [ -n "$1" ]
   do
     create_index "$1" "${safe_mode}"
+    echo ""
+    shift
+  done
+}
+
+delete_indexes(){
+  local force="no"
+  if [ "$1" == "--force" ]
+  then
+    force="yes"
+    shift
+  fi
+
+  if [ "$force" != "yes" ]
+  then
+    echo "Next index will be deleted. are you sure (yes/no)"
+    read confirmation
+    if [ "$confirmation" != "yes" ]
+    then
+      exit
+    fi
+  fi
+
+  while [ -n "$1" ]
+  do
+    delete_index "$1"
+    echo ""
     shift
   done
 }
@@ -104,6 +135,10 @@ case $1 in
   delete-idx)
     shift
     delete_index $@
+    ;;
+  delete-idxs)
+    shift
+    delete_indexes $@
     ;;
   list-schms)
     list_schemas
