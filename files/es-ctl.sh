@@ -18,9 +18,10 @@ use() {
     echo "      SCHEMA_PATH : json file wiht schema definition. If not defined"
     echo '        /etc/es-ctl/${NAME}.es.schema.json will be used'
     echo "  create-idxs : create multiple index"
-    echo "    options: [--safe-mode] NAME1 ... NAMEn"
+    echo "    options: [--safe-mode] NAME1 [-p PATH1] ... NAMEn [-p PATHn]"
     echo "      --safe-mode : Apply only if index does not exists"
-    echo '      NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/${NAME}.es.schema.json'
+    echo '      NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/${NAMEx}.es.schema.json by default'
+    echo '      PATHx : Use this path fot this index instead of /etc/es-ctl/${NAMEx}.es.schema.json'
     echo "  create-all : create all indexes infering name of index from Schmema file name."
     echo '    All flies which path follow /etc/es-ctl/${NAME}.es.schema.json pattern, will used to create index.'
     echo "    options: [--safe-mode]"
@@ -81,7 +82,19 @@ create_indexes(){
 
   while [ -n "$1" ]
   do
-    create_index "$1" "${safe_mode}"
+    if [ "$2" == "-p" ]
+    then
+      if [ -z "$3" ]
+      then
+        echo "Error. -p expecified without path value when create_indexes"
+        use
+        exit 1
+      fi
+      create_index "$1" "${safe_mode}" "$3"
+      shift 2
+    else
+      create_index "$1" "${safe_mode}"
+    fi
     echo ""
     shift
   done
