@@ -157,7 +157,7 @@ create_indexes(){
     done
 
     create_index "$name" "$safe_mode" $path
-    if [ -n "alias" ]; then
+    if [ -n "$alias" ]; then
       create_alias $safe_mode "$alias" "$name"
     fi
     echo ""
