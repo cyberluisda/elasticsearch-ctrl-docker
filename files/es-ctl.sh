@@ -30,6 +30,7 @@ use() {
     echo "    options: [--force] NAME1 ... NAMEn"
     echo "      --force : Do not ask for confirmation"
     echo '      NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/${NAME}.es.schema.json'
+    echo "  list-aliases : list all aliases"
 }
 
 list_indexes() {
@@ -153,6 +154,10 @@ list_schemas() {
   done
 }
 
+list_aliases() {
+  curl "${ES_ENTRY_POINT}/_cat/aliases?v" 2>/tmp/output_error || cat /tmp/output_error
+}
+
 
 case $1 in
   list-idxs)
@@ -180,6 +185,9 @@ case $1 in
     ;;
   list-schms)
     list_schemas
+    ;;
+  list-aliases)
+    list_aliases
     ;;
   *)
     use
