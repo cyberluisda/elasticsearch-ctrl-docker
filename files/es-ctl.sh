@@ -23,10 +23,11 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
       SCHEMA_PATH : json file wiht schema definition. If not defined
         /etc/es-ctl/\${NAME}.es.schema.json will be used
   create-idxs : create multiple index
-    options: [--safe-mode] NAME1 [-p PATH1] ... NAMEn [-p PATHn]
+    options: [--safe-mode] NAME1 [-p PATH1] [-a ALIAS1] ... NAMEn [-p PATHn] [-a ALIASn]
       --safe-mode : Apply only if index does not exists
       NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/\${NAMEx}.es.schema.json by default
       PATHx : Use this path fot this index instead of /etc/es-ctl/\${NAMEx}.es.schema.json
+      ALIASx: If defined create alias pointed to this index.
   create-all : create all indexes infering name of index from Schmema file name.
     All flies which path follow /etc/es-ctl/\${NAME}.es.schema.json pattern, will used to create index.
     options: [--safe-mode]
@@ -123,18 +124,41 @@ create_indexes(){
 
   while [ -n "$1" ]
   do
-    if [ "$2" == "-p" ]
-    then
-      if [ -z "$3" ]
-      then
-        echo "Error. -p expecified without path value when create_indexes"
-        usage
-        exit 1
-      fi
-      create_index "$1" "${safe_mode}" "$3"
-      shift 2
-    else
-      create_index "$1" "${safe_mode}"
+    local name="$1"
+    local path=""
+    local alias=""
+    local continueWithSubparams=""
+    while [ -z "$continueWithSubparams" ]; do
+      case $2 in
+        -p)
+          if [ -z "$3" ]
+          then
+            echo "Error. -p expecified without path value when create_indexes"
+            usage
+            exit 1
+          fi
+          path="$3"
+          shift 2
+          ;;
+        -a)
+          if [ -z "$3" ]
+          then
+            echo "Error. -a expecified without path aliase name when create_indexes"
+            usage
+            exit 1
+          fi
+          alias="$3"
+          shift 2
+          ;;
+        * )
+          continueWithSubparams="no"
+          ;;
+      esac
+    done
+
+    create_index "$name" "$safe_mode" $path
+    if [ -n "$alias" ]; then
+      create_alias $safe_mode "$alias" "$name"
     fi
     echo ""
     shift
