@@ -36,6 +36,11 @@ use() {
     echo "      --safe-mode : Apply only if alias does not exists."
     echo '      NAME : the name of the alias to create.'
     echo '      INDICE_NAME : the name of the indice to be pointed by alias.'
+    echo "  create-aliases : create multiple aliases"
+    echo "    options: [--safe-mode] NAME1 INDICE_NAME1 ... NAMEn INDICE_NAMEn"
+    echo "      --safe-mode : Apply only if alias does not exists."
+    echo '      NAMEx : the name of the alias to create.'
+    echo '      INDICE_NAMEx : the name of the indice to be pointed by alias.'
 }
 
 list_indexes() {
@@ -193,6 +198,27 @@ create_alias(){
   fi
 }
 
+create_aliases(){
+  local safe_mode=""
+  if [ "$1" == "--safe-mode" ]
+  then
+    safe_mode=$1
+    shift
+  fi
+
+  while [ -n "$1" ]
+  do
+    if [ -z "$2" ]; then
+      echo "Error. alias without indices names in cerate_aliases"
+      use
+      exit 1
+    else
+      create_alias ${safe_mode} $1 $2
+    fi
+    echo ""
+    shift 2
+  done
+}
 
 case $1 in
   list-idxs)
@@ -227,6 +253,10 @@ case $1 in
   create-alias)
     shift
     create_alias $@
+    ;;
+  create-aliases)
+    shift
+    create_aliases $@
     ;;
   *)
     use
