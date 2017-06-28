@@ -3,6 +3,9 @@ set -e
 
 # Common configuration
 ES_ENTRY_POINT="${ES_ENTRY_POINT:-http://elastic-search:9200}"
+# Only for get listed here.
+WAIT_FOR_SERVICE_UP="${WAIT_FOR_SERVICE_UP}"
+WAIT_FOR_SERVICE_UP_TIMEOUT="${WAIT_FOR_SERVICE_UP_TIMEOUT:-10s}"
 
 use() {
     echo "es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options}"
@@ -220,42 +223,64 @@ create_aliases(){
   done
 }
 
+wait_for_service_up(){
+    if [ -n "$WAIT_FOR_SERVICE_UP" ]; then
+      local services=""
+      #Set -wait option to use with docerize
+      for service in $WAIT_FOR_SERVICE_UP; do
+        services="$services -wait $service"
+      done
+      echo "Waiting till services $WAIT_FOR_SERVICE_UP are accessible (or timeout: $WAIT_FOR_SERVICE_UP_TIMEOUT)"
+      dockerize $services -timeout "$WAIT_FOR_SERVICE_UP_TIMEOUT"
+    fi
+}
+
 case $1 in
   list-idxs)
+    wait_for_service_up
     list_indexes
     ;;
   create-idx)
     shift
+    wait_for_service_up
     create_index $@
     ;;
   create-idxs)
     shift
+    wait_for_service_up
     create_indexes $@
     ;;
   create-all)
     shift
+    wait_for_service_up
     create_all $@
     ;;
   delete-idx)
     shift
+    wait_for_service_up
     delete_index $@
     ;;
   delete-idxs)
     shift
+    wait_for_service_up
     delete_indexes $@
     ;;
   list-schms)
+    wait_for_service_up
     list_schemas
     ;;
   list-aliases)
+    wait_for_service_up
     list_aliases
     ;;
   create-alias)
     shift
+    wait_for_service_up
     create_alias $@
     ;;
   create-aliases)
     shift
+    wait_for_service_up
     create_aliases $@
     ;;
   *)
