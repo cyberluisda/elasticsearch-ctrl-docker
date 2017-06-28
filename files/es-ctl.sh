@@ -31,6 +31,11 @@ use() {
     echo "      --force : Do not ask for confirmation"
     echo '      NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/${NAME}.es.schema.json'
     echo "  list-aliases : list all aliases"
+    echo "  create-alias : create one alias"
+    echo "    options: [--safe-mode] NAME INDICE_NAME"
+    echo "      --safe-mode : Apply only if alias does not exists."
+    echo '      NAME : the name of the alias to create.'
+    echo '      INDICE_NAME : the name of the indice to be pointed by alias.'
 }
 
 list_indexes() {
@@ -158,6 +163,36 @@ list_aliases() {
   curl "${ES_ENTRY_POINT}/_cat/aliases?v" 2>/tmp/output_error || cat /tmp/output_error
 }
 
+create_alias(){
+  local safe_mode="no"
+  if [ "$1" == "--safe-mode" ]; then
+    safe_mode="yes"
+    shift
+  fi
+  local name=$1
+  shift
+  local indice=$1
+
+  if [ -z "$name" -a -z "$indice" ]; then
+    echo "Error. Create alias withount name or indice"
+    use
+    exit 1
+  fi
+
+  if [ "yes" == "${safe_mode}" ]; then
+    if list_aliases | awk '{print $1}' | fgrep ${name} > /dev/null
+    then
+      echo "Alias ${name} exists, ignoring"
+    else
+      curl -XPOST "${ES_ENTRY_POINT}/_aliases" -H 'Content-Type: application/json' -d \
+        "{ \"actions\" : [ { \"add\" : { \"index\" : \"${indice}\", \"alias\" : \"${name}\" } } ] }" 2>/tmp/output_error  || cat /tmp/output_error
+    fi
+  else
+    curl -XPOST "${ES_ENTRY_POINT}/_aliases" -H 'Content-Type: application/json' -d \
+      "{ \"actions\" : [ { \"add\" : { \"index\" : \"${indice}\", \"alias\" : \"${name}\" } } ] }" 2>/tmp/output_error  || cat /tmp/output_error
+  fi
+}
+
 
 case $1 in
   list-idxs)
@@ -188,6 +223,10 @@ case $1 in
     ;;
   list-aliases)
     list_aliases
+    ;;
+  create-alias)
+    shift
+    create_alias $@
     ;;
   *)
     use
