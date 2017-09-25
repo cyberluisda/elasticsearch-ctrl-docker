@@ -69,6 +69,13 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
     options: [--full]
       --full: If present full information is displayed, else only names is displayed
 
+  add-user: Add (or edit) user. Xpack plugin is required
+    options: [--full-name FULL_NAME] [--email EMAIL] USER_NAME PASSWORD ROL1 ... ROLn
+      FULL_NAME: User full name. In only one parameter
+      EMAIL: User e-mail.
+      USER_NAME: User id used to log-in
+      PASSWORD: Password of the user to log-in
+
     ENVIRONMENT CONFIGURATION.
       There are some configuration and behaviours that can be set using next Environment
       Variables:
@@ -400,6 +407,95 @@ list_roles(){
   | jq "${only_names}"
 }
 
+add_user(){
+  # --full-name FULL_NAME] [--email EMAIL] USER_NAME PASSWORD ROL1 ... ROLn
+
+  local full_name=""
+  local email=""
+  while true
+  do
+    case $1 in
+      --full-name)
+        if [ -z "$2" ]
+        then
+          echo "Error. --full-name without value in add_user method"
+          usage
+          exit 1
+        fi
+        full_name="\"full_name\" : \"$2\","
+        shift 2
+        ;;
+      --email)
+        if [ -z "$2" ]
+        then
+          echo "Error. --email without value in add_user method"
+          usage
+          exit 1
+        fi
+        email="\"email\" : \"$2\","
+        shift 2
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  local name="$1"
+  if [ -z "$name" ]
+  then
+    echo "Error. add_user method without user name"
+    usage
+    exit 1
+  fi
+  shift 1
+
+  local password="$1"
+  if [ -z "$password" ]
+  then
+    echo "Error. add_user method without password"
+    usage
+    exit 1
+  fi
+  shift 1
+
+  local roles=""
+  while [ -n "$1" ]
+  do
+    roles="$1\", \"$roles"
+    shift
+  done
+
+  if [ -z "$roles" ]
+  then
+    echo "Error. add_user method without roles"
+    usage
+    exit 1
+  fi
+
+  #Format roles as json
+  roles="$(echo "$roles" | sed -e 's/, \"$/]/' -e 's/^/["/')"
+
+  local tempFile="$(mktemp)"
+  cat > "$tempFile" << EOF
+{
+  "password" : "$password",
+  "roles" : $roles,
+  ${full_name}
+  $email
+  "metadata" : {}
+}
+EOF
+
+  curl -sL \
+    -XPOST "${ES_ENTRY_POINT}/_xpack/security/user/$name" \
+    -H 'Content-Type: application/json' \
+    -d "@$tempFile" \
+  | jq
+
+  rm -f "$tempFile"
+}
+
 wait_for_service_up(){
     if [ -n "$WAIT_FOR_SERVICE_UP" ]; then
       local services=""
@@ -485,6 +581,11 @@ case $1 in
     shift
     wait_for_service_up
     list_roles $@
+    ;;
+  add-user)
+    shift
+    wait_for_service_up
+    add_user "$@"
     ;;
   *)
     usage
