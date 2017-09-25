@@ -60,6 +60,10 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
       There are some configuration and behaviours that can be set using next Environment
       Variables:
 
+        ES_ENTRY_POINT. Entry point of Elastic Search REST API. Default: http://elastfic-search:9200
+          If you need set user password with basic authentication (only one mode supported)
+          you shoul set here user and password (as estandar URL way).
+
         ZOOKEEPER_ENTRY_POINT. Define zookeeper entry point. By default: zookeeper:2181
 
         KAFKA_BROKER_LIST. Define kafka bootstrap server entry points. By default:
