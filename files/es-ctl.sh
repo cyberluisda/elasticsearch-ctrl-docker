@@ -47,6 +47,13 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
       --safe-mode : Apply only if alias does not exists.
       NAMEx : the name of the alias to create.
       INDICE_NAMEx : the name of the indice to be pointed by alias.
+  add-license: Add lincense to a cluster (cluster must have x-pack plugin installed)
+    options: [--force-if-exists] [--no-aknowledge] LICENSE_AS_JSON
+      --force-if-exists: If there is one license in cluster, with this option command
+        to add license will be run anyway.
+      --no-acknowledge: By default aknowledge parameter with true value is sent
+        when license is put, with this option paramter is removed from query.
+      LICENSE_AS_JSON: String in JSON format with license data
 
     ENVIRONMENT CONFIGURATION.
       There are some configuration and behaviours that can be set using next Environment
@@ -274,6 +281,55 @@ create_aliases(){
   done
 }
 
+
+add_license(){
+  local force_if_exists="no"
+  local force_if_exists="no"
+  local acknowledge="?acknowledge=true"
+  while true
+  do
+    case $1 in
+      --force-if-exists)
+        force_if_exists="yes"
+        ;;
+      --no-acknowledge)
+        acknowledge=""
+        ;;
+      *)
+        break
+        ;;
+    esac
+    shift 1
+  done
+
+  # Load license
+  local license_data="$1"
+  if [ -z "$license_data" ]
+  then
+    echo "Error. License data is empty in add_license"
+    usage
+    exit 1
+  fi
+
+  # Get if other license is on cluster
+  local existing_license="$(curl -sL -XGET "${ES_ENTRY_POINT}/_license" | jq '.[]')"
+  if [ -n "$existing_license" ]
+  then
+    if [ "$force_if_exists" == "no" ]
+    then
+      echo "Error: There is one lincense uploaded in cluster or error found: $(curl -sL -XGET "${ES_ENTRY_POINT}/_license")"
+      exit 1
+    else
+      echo "Warning: There is one lincense in cluster but --force-if-exists option was set"
+    fi
+  fi
+
+  curl \
+    -XPOST "${ES_ENTRY_POINT}/_license${acknowledge}" \
+    -H 'Content-Type: application/json' \
+    -d "${license_data}"
+}
+
 wait_for_service_up(){
     if [ -n "$WAIT_FOR_SERVICE_UP" ]; then
       local services=""
@@ -333,6 +389,12 @@ case $1 in
     shift
     wait_for_service_up
     create_aliases $@
+    ;;
+  add-license)
+    shift
+    wait_for_service_up
+    # Pass up to 3 parameters escaped because one of then is JSXON with spaces
+    add_license "$1" "$2" "$3"
     ;;
   *)
     usage
