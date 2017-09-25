@@ -76,6 +76,11 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
       USER_NAME: User id used to log-in
       PASSWORD: Password of the user to log-in
 
+  add-role: Add roles. Xpack plugin is required
+    options NAME ROLE_SPEC_JSON
+      NAME: Name of te roles
+      ROLE_SPEC_JSON: Role specification in json format
+
     ENVIRONMENT CONFIGURATION.
       There are some configuration and behaviours that can be set using next Environment
       Variables:
@@ -496,6 +501,30 @@ EOF
   rm -f "$tempFile"
 }
 
+add_role(){
+
+  # Load role name specificatoin
+  local name="$1"
+  if [ -z "$name" ]
+  then
+    echo "Error. role name is empty in add_role"
+    usage
+    exit 1
+  fi
+  local role_data="$2"
+  if [ -z "$role_data" ]
+  then
+    echo "Error. Role data specification is empty in add_role"
+    usage
+    exit 1
+  fi
+
+  curl -sL \
+    -XPOST "${ES_ENTRY_POINT}/_xpack/security/role/$name" \
+    -H 'Content-Type: application/json' \
+    -d "${role_data}"
+}
+
 wait_for_service_up(){
     if [ -n "$WAIT_FOR_SERVICE_UP" ]; then
       local services=""
@@ -586,6 +615,11 @@ case $1 in
     shift
     wait_for_service_up
     add_user "$@"
+    ;;
+  add-role)
+    shift
+    wait_for_service_up
+    add_role "$@"
     ;;
   *)
     usage
