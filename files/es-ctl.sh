@@ -65,6 +65,10 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
     options: [--full]
       --full: If present full information is displayed, else only names is displayed
 
+  list-roles: List all roles. Xpack plugin is required
+    options: [--full]
+      --full: If present full information is displayed, else only names is displayed
+
     ENVIRONMENT CONFIGURATION.
       There are some configuration and behaviours that can be set using next Environment
       Variables:
@@ -383,6 +387,19 @@ list_users(){
   | jq "${only_names}"
 }
 
+list_roles(){
+  local only_names="keys"
+  if [ "$1" == "--full" ]
+  then
+    only_names="."
+  fi
+
+  curl -sL \
+    -XGET "${ES_ENTRY_POINT}/_xpack/security/role" \
+    -H 'Content-Type: application/json' \
+  | jq "${only_names}"
+}
+
 wait_for_service_up(){
     if [ -n "$WAIT_FOR_SERVICE_UP" ]; then
       local services=""
@@ -463,6 +480,11 @@ case $1 in
     shift
     wait_for_service_up
     list_users $@
+    ;;
+  list-roles)
+    shift
+    wait_for_service_up
+    list_roles $@
     ;;
   *)
     usage
