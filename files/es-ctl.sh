@@ -48,10 +48,10 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
       NAMEx : the name of the alias to create.
       INDICE_NAMEx : the name of the indice to be pointed by alias.
   add-license: Add lincense to a cluster (cluster must have x-pack plugin installed)
-    options: [--force-if-exists] [--no-aknowledge] LICENSE_AS_JSON
+    options: [--force-if-exists] [--no-acknowledge] LICENSE_AS_JSON
       --force-if-exists: If there is one license in cluster, with this option command
         to add license will be run anyway.
-      --no-acknowledge: By default aknowledge parameter with true value is sent
+      --no-acknowledge: By default acknowledge parameter with true value is sent
         when license is put, with this option paramter is removed from query.
       LICENSE_AS_JSON: String in JSON format with license data
   get-license: List current license
@@ -322,7 +322,7 @@ add_license(){
   then
     if [ "$force_if_exists" == "no" ]
     then
-      echo "Error: There is one lincense uploaded in cluster or error found: $(curl -sL -XGET "${ES_ENTRY_POINT}/_xpack/license")"
+      echo "Error: There is one lincense uploaded in cluster or error found. (Run get-license command for more info)"
       exit 1
     else
       echo "Warning: There is one lincense in cluster but --force-if-exists option was set"
