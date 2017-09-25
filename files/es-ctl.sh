@@ -402,8 +402,8 @@ case $1 in
   add-license)
     shift
     wait_for_service_up
-    # Pass up to 3 parameters escaped because one of then is JSXON with spaces
-    add_license "$1" "$2" "$3"
+    # Pass up to parameters escaped because one of then is JSON with spaces
+    add_license "$@"
     ;;
   get-license)
     shift
