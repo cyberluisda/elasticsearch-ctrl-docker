@@ -55,7 +55,11 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
         when license is put, with this option paramter is removed from query.
       LICENSE_AS_JSON: String in JSON format with license data
   get-license: List current license
-  
+
+  change-password: Change password for a user. Xpack plugin is required
+    options: USER_NAME NEW_PASSWORD
+      USER_NAME: User login id.
+      NEW_PASSWORD: New password
     ENVIRONMENT CONFIGURATION.
       There are some configuration and behaviours that can be set using next Environment
       Variables:
@@ -339,6 +343,28 @@ get_license(){
   curl -sL -XGET "${ES_ENTRY_POINT}/_xpack/license" | jq .
 }
 
+change_password(){
+  local user="$1"
+  local passwd="$2"
+  if [ -z "$user" ]
+  then
+    echo "Error: change_password without user name"
+    exit 1
+    usage
+  fi
+  if [ -z "$passwd" ]
+  then
+    echo "Error: change_password without password"
+    exit 1
+    usage
+  fi
+
+  curl \
+    -XPUT "${ES_ENTRY_POINT}/_xpack/security/user/${user}/_password" \
+    -H 'Content-Type: application/json' \
+    -d "{\"${passwd}\"}"
+}
+
 wait_for_service_up(){
     if [ -n "$WAIT_FOR_SERVICE_UP" ]; then
       local services=""
@@ -409,6 +435,11 @@ case $1 in
     shift
     wait_for_service_up
     get_license $@
+    ;;
+  change-password)
+    shift
+    wait_for_service_up
+    change_password $@
     ;;
   *)
     usage
