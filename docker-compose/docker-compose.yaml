@@ -22,3 +22,5 @@ services:
       ES_ELASTIC_DELETE_CONFIG_UNICAST: "ping.unicast.hosts"
     healthcheck:
       test: "nc -z 0.0.0.0 9200 && nc -z localhost 9300"
+    ports:
+    - 9200:9200
