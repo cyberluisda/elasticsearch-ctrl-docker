@@ -334,7 +334,7 @@ add_license(){
   fi
 
   curl \
-    -XPOST "${ES_ENTRY_POINT}/_license${acknowledge}" \
+    -XPOST "${ES_ENTRY_POINT}/_xpack/license${acknowledge}" \
     -H 'Content-Type: application/json' \
     -d "${license_data}"
 }
