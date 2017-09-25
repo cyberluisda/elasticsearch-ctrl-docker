@@ -54,7 +54,8 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
       --no-acknowledge: By default aknowledge parameter with true value is sent
         when license is put, with this option paramter is removed from query.
       LICENSE_AS_JSON: String in JSON format with license data
-
+  get-license: List current license
+  
     ENVIRONMENT CONFIGURATION.
       There are some configuration and behaviours that can be set using next Environment
       Variables:
@@ -312,12 +313,12 @@ add_license(){
   fi
 
   # Get if other license is on cluster
-  local existing_license="$(curl -sL -XGET "${ES_ENTRY_POINT}/_license" | jq '.[]')"
+  local existing_license="$(get_license | jq '.[]')"
   if [ -n "$existing_license" ]
   then
     if [ "$force_if_exists" == "no" ]
     then
-      echo "Error: There is one lincense uploaded in cluster or error found: $(curl -sL -XGET "${ES_ENTRY_POINT}/_license")"
+      echo "Error: There is one lincense uploaded in cluster or error found: $(curl -sL -XGET "${ES_ENTRY_POINT}/_xpack/license")"
       exit 1
     else
       echo "Warning: There is one lincense in cluster but --force-if-exists option was set"
@@ -328,6 +329,10 @@ add_license(){
     -XPOST "${ES_ENTRY_POINT}/_license${acknowledge}" \
     -H 'Content-Type: application/json' \
     -d "${license_data}"
+}
+
+get_license(){
+  curl -sL -XGET "${ES_ENTRY_POINT}/_xpack/license" | jq .
 }
 
 wait_for_service_up(){
@@ -395,6 +400,11 @@ case $1 in
     wait_for_service_up
     # Pass up to 3 parameters escaped because one of then is JSXON with spaces
     add_license "$1" "$2" "$3"
+    ;;
+  get-license)
+    shift
+    wait_for_service_up
+    get_license $@
     ;;
   *)
     usage
