@@ -60,6 +60,11 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
     options: USER_NAME NEW_PASSWORD
       USER_NAME: User login id.
       NEW_PASSWORD: New password
+
+  list-users: List all users. Xpack plugin is required
+    options: [--full]
+      --full: If present full information is displayed, else only names is displayed
+
     ENVIRONMENT CONFIGURATION.
       There are some configuration and behaviours that can be set using next Environment
       Variables:
@@ -365,6 +370,19 @@ change_password(){
     -d "{\"${passwd}\"}"
 }
 
+list_users(){
+  local only_names="keys"
+  if [ "$1" == "--full" ]
+  then
+    only_names="."
+  fi
+
+  curl -sL \
+    -XGET "${ES_ENTRY_POINT}/_xpack/security/user" \
+    -H 'Content-Type: application/json' \
+  | jq "${only_names}"
+}
+
 wait_for_service_up(){
     if [ -n "$WAIT_FOR_SERVICE_UP" ]; then
       local services=""
@@ -440,6 +458,11 @@ case $1 in
     shift
     wait_for_service_up
     change_password $@
+    ;;
+  list-users)
+    shift
+    wait_for_service_up
+    list_users $@
     ;;
   *)
     usage
