@@ -151,7 +151,7 @@ list_indexes() {
 
 delete_index() {
   rm -f /tmp/output_error
-  curl -XDELETE "${ES_ENTRY_POINT}/$1" 2>> /tmp/output_error | tee -a /tmp/output_error
+  curl -XDELETE "${ES_ENTRY_POINT}/$1" 2>> /tmp/output_error | tee -a /tmp/output_error | jq .
   checks_errors_in_response
 }
 
@@ -181,10 +181,10 @@ create_index() {
     then
       echo "Index ${index_name} exists, ignoring"
     else
-      curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>> /tmp/output_error | tee -a /tmp/output_error
+      curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>> /tmp/output_error | tee -a /tmp/output_error | jq .
     fi
   else
-    curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>> /tmp/output_error | tee -a /tmp/output_error
+    curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>> /tmp/output_error | tee -a /tmp/output_error | jq .
   fi
   checks_errors_in_response
 }
@@ -322,11 +322,13 @@ create_alias(){
       echo "Alias ${name} exists, ignoring"
     else
       curl -XPOST "${ES_ENTRY_POINT}/_aliases" -H 'Content-Type: application/json' -d \
-        "{ \"actions\" : [ { \"add\" : { \"index\" : \"${indice}\", \"alias\" : \"${name}\" } } ] }" 2>> /tmp/output_error | tee -a /tmp/output_error
+        "{ \"actions\" : [ { \"add\" : { \"index\" : \"${indice}\", \"alias\" : \"${name}\" } } ] }" \
+      2>> /tmp/output_error | tee -a /tmp/output_error | jq .
     fi
   else
     curl -XPOST "${ES_ENTRY_POINT}/_aliases" -H 'Content-Type: application/json' -d \
-      "{ \"actions\" : [ { \"add\" : { \"index\" : \"${indice}\", \"alias\" : \"${name}\" } } ] }" 2>> /tmp/output_error | tee -a /tmp/output_error
+      "{ \"actions\" : [ { \"add\" : { \"index\" : \"${indice}\", \"alias\" : \"${name}\" } } ] }" \
+    2>> /tmp/output_error | tee -a /tmp/output_error | jq .
   fi
   checks_errors_in_response
 }
@@ -401,7 +403,7 @@ add_license(){
     -XPOST "${ES_ENTRY_POINT}/_xpack/license${acknowledge}" \
     -H 'Content-Type: application/json' \
     -d "${license_data}" \
-  2>> /tmp/output_error | tee -a /tmp/output_error
+  2>> /tmp/output_error | tee -a /tmp/output_error | jq .
 
   checks_errors_in_response
 }
@@ -589,7 +591,7 @@ EOF
     -XPOST "${ES_ENTRY_POINT}/_xpack/security/user/$name" \
     -H 'Content-Type: application/json' \
     -d "@$tempFile" \
-  2>> /tmp/output_error | tee -a /tmp/output_error
+  2>> /tmp/output_error | tee -a /tmp/output_error | jq .
 
   rm -f "$tempFile"
   checks_errors_in_response
@@ -618,7 +620,7 @@ add_role(){
     -XPOST "${ES_ENTRY_POINT}/_xpack/security/role/$name" \
     -H 'Content-Type: application/json' \
     -d "${role_data}" \
-  2>> /tmp/output_error | tee -a /tmp/output_error
+  2>> /tmp/output_error | tee -a /tmp/output_error | jq .
   checks_errors_in_response
 }
 
