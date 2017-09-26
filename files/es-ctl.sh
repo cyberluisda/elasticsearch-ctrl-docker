@@ -383,7 +383,7 @@ change_password(){
   curl \
     -XPUT "${ES_ENTRY_POINT}/_xpack/security/user/${user}/_password" \
     -H 'Content-Type: application/json' \
-    -d "{\"${passwd}\"}"
+    -d "{\"password\": \"${passwd}\"}"
 }
 
 list_users(){
