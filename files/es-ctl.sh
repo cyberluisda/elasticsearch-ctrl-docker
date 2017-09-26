@@ -57,9 +57,36 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
   get-license: List current license
 
   change-password: Change password for a user. Xpack plugin is required
-    options: USER_NAME NEW_PASSWORD
+    options: [--check-old-user-password USER_NAME_OLD PASSWORD_OLD] USER_NAME NEW_PASSWORD
       USER_NAME: User login id.
       NEW_PASSWORD: New password
+      --check-old-user-password. Usefull when you need to change default password
+        of superuser after bootstramp installation. With this option we call first
+        with USER_NAME_OLD and PASSWORD_OLD, if authentication fails (response
+        different of 401 status code, command will exit with status 0, no error).
+        But if authentication can be granted then change password will be executed
+        as usual way.
+
+        For example if just after fitrst installation you need change password of
+        \"elastic\" user from default \"changeme\" to more secure password.
+        You can call with as example:
+
+        .... change-password elastic changeme elastic MoreSecurePassword
+
+        Initial execution of this command will authenticated with with changeme
+        password and then  change-password will be executed.
+        In next executions with just this optison, for example after upgrade
+        system, changeme password is invalid and can not be authorized (response 401)
+        change-password will not have any effect and return with status code 0.
+
+        This will allow to create init services for change defaults passwor in
+        Kubernetes as example.
+      USER_NAME_OLD Old username to pre-check. NOTE: For sed restrictions '|' chart
+        must be escaped, in same way special chars like :@ used in authentication by
+        URL.
+      PASSWORD_OLD: Old password to pre-check. NOTE: For sed restrictions '|' chart
+        must be escaped, in same way special chars like :@ used in authentication by
+        URL.
 
   list-users: List all users. Xpack plugin is required
     options: [--full]
@@ -365,6 +392,28 @@ get_license(){
 }
 
 change_password(){
+  local check_old_user="no"
+  while true
+  do
+    case $1 in
+      --check-old-user-password)
+        if [ -z "$2" -o -z "$3" ]
+        then
+          echo "Error: change_password with --check-old-user-password without user and or password"
+          usage
+          exit 1
+        fi
+        local old_user="$2"
+        local old_password="$3"
+        check_old_user="yes"
+        shift 3
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
   local user="$1"
   local passwd="$2"
   if [ -z "$user" ]
@@ -378,6 +427,19 @@ change_password(){
     echo "Error: change_password without password"
     exit 1
     usage
+  fi
+
+  if [ "yes" == "$check_old_user" ]
+  then
+    #Replacing user password with old user/password in entry point
+    local old_entry_point=$(echo "${ES_ENTRY_POINT}" | sed -re "s|(https?://)(\w+:\w+@)?([a-zA-Z\.:0-9/_\-]+)|\1${old_user}:${old_password}@\3|")
+
+    # If old user is unauthorized exit without error
+    if curl -s "$old_entry_point" | fgrep '"status":401' > /dev/null
+    then
+      echo "Info. Old user password now is unauthorized, nothing to do"
+      exit 0
+    fi
   fi
 
   curl \
