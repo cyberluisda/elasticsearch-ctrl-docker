@@ -6,6 +6,7 @@ ES_ENTRY_POINT="${ES_ENTRY_POINT:-http://elastic-search:9200}"
 # Only for get listed here.
 WAIT_FOR_SERVICE_UP="${WAIT_FOR_SERVICE_UP}"
 WAIT_FOR_SERVICE_UP_TIMEOUT="${WAIT_FOR_SERVICE_UP_TIMEOUT:-10s}"
+CHECK_ERRORS_IN_RESPOSE="${CHECK_ERRORS_IN_RESPOSE:-yes}"
 
 
 usage() {
@@ -135,18 +136,27 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
 
         WAIT_FOR_SERVICE_UP_TIMEOUT. Set timeot when check services listed on
           WAIT_FOR_SERVICE_UP. Default value 10s
+
+        CHECK_ERRORS_IN_RESPOSE. If is \"yes\" (default) some errors like unauthorized
+          access are checked on response of some commands and exit with error code if
+          applied.
 "
 }
 
 list_indexes() {
-  curl "${ES_ENTRY_POINT}/_cat/indices?v" 2>/tmp/output_error || cat /tmp/output_error
+  rm -f /tmp/output_error
+  curl "${ES_ENTRY_POINT}/_cat/indices?v" 2>> /tmp/output_error | tee -a /tmp/output_error
+  checks_errors_in_response
 }
 
 delete_index() {
-  curl -XDELETE "${ES_ENTRY_POINT}/$1" 2>/tmp/output_error || cat /tmp/output_error
+  rm -f /tmp/output_error
+  curl -XDELETE "${ES_ENTRY_POINT}/$1" 2>> /tmp/output_error | tee -a /tmp/output_error
+  checks_errors_in_response
 }
 
 create_index() {
+  rm -f /tmp/output_error
   local index_name=$1
   shift
   local schema_path="/etc/es-ctl/${index_name}.es.schema.json"
@@ -171,11 +181,12 @@ create_index() {
     then
       echo "Index ${index_name} exists, ignoring"
     else
-      curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>/tmp/output_error  || cat /tmp/output_error
+      curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>> /tmp/output_error | tee -a /tmp/output_error
     fi
   else
-    curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>/tmp/output_error  || cat /tmp/output_error
+    curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>> /tmp/output_error | tee -a /tmp/output_error
   fi
+  checks_errors_in_response
 }
 
 create_indexes(){
@@ -283,10 +294,13 @@ list_schemas() {
 }
 
 list_aliases() {
-  curl "${ES_ENTRY_POINT}/_cat/aliases?v" 2>/tmp/output_error || cat /tmp/output_error
+  rm -f /tmp/output_error
+  curl "${ES_ENTRY_POINT}/_cat/aliases?v" 2>> /tmp/output_error | tee -a /tmp/output_error
+  checks_errors_in_response
 }
 
 create_alias(){
+  rm -f /tmp/output_error
   local safe_mode="no"
   if [ "$1" == "--safe-mode" ]; then
     safe_mode="yes"
@@ -308,12 +322,13 @@ create_alias(){
       echo "Alias ${name} exists, ignoring"
     else
       curl -XPOST "${ES_ENTRY_POINT}/_aliases" -H 'Content-Type: application/json' -d \
-        "{ \"actions\" : [ { \"add\" : { \"index\" : \"${indice}\", \"alias\" : \"${name}\" } } ] }" 2>/tmp/output_error  || cat /tmp/output_error
+        "{ \"actions\" : [ { \"add\" : { \"index\" : \"${indice}\", \"alias\" : \"${name}\" } } ] }" 2>> /tmp/output_error | tee -a /tmp/output_error
     fi
   else
     curl -XPOST "${ES_ENTRY_POINT}/_aliases" -H 'Content-Type: application/json' -d \
-      "{ \"actions\" : [ { \"add\" : { \"index\" : \"${indice}\", \"alias\" : \"${name}\" } } ] }" 2>/tmp/output_error  || cat /tmp/output_error
+      "{ \"actions\" : [ { \"add\" : { \"index\" : \"${indice}\", \"alias\" : \"${name}\" } } ] }" 2>> /tmp/output_error | tee -a /tmp/output_error
   fi
+  checks_errors_in_response
 }
 
 create_aliases(){
@@ -340,6 +355,7 @@ create_aliases(){
 
 
 add_license(){
+  rm -f /tmp/output_error
   local force_if_exists="no"
   local force_if_exists="no"
   local acknowledge="?acknowledge=true"
@@ -384,14 +400,20 @@ add_license(){
   curl \
     -XPOST "${ES_ENTRY_POINT}/_xpack/license${acknowledge}" \
     -H 'Content-Type: application/json' \
-    -d "${license_data}"
+    -d "${license_data}" \
+  2>> /tmp/output_error | tee -a /tmp/output_error
+
+  checks_errors_in_response
 }
 
 get_license(){
-  curl -sL -XGET "${ES_ENTRY_POINT}/_xpack/license" | jq .
+  local license="$(curl -sL -XGET "${ES_ENTRY_POINT}/_xpack/license")"
+  checks_errors_in_response "$license"
+  echo "$license" | jq .
 }
 
 change_password(){
+  rm -f /tmp/output_error
   local check_old_user="no"
   while true
   do
@@ -445,7 +467,10 @@ change_password(){
   curl \
     -XPUT "${ES_ENTRY_POINT}/_xpack/security/user/${user}/_password" \
     -H 'Content-Type: application/json' \
-    -d "{\"password\": \"${passwd}\"}"
+    -d "{\"password\": \"${passwd}\"}" \
+  2>> /tmp/output_error | tee -a /tmp/output_error
+
+  checks_errors_in_response
 }
 
 list_users(){
@@ -455,10 +480,13 @@ list_users(){
     only_names="."
   fi
 
-  curl -sL \
+  local users="$(curl -sL \
     -XGET "${ES_ENTRY_POINT}/_xpack/security/user" \
     -H 'Content-Type: application/json' \
-  | jq "${only_names}"
+    )"
+
+  checks_errors_in_response "$users"
+  echo "$users" | jq "${only_names}"
 }
 
 list_roles(){
@@ -468,14 +496,17 @@ list_roles(){
     only_names="."
   fi
 
-  curl -sL \
+  local roles="$(curl -sL \
     -XGET "${ES_ENTRY_POINT}/_xpack/security/role" \
     -H 'Content-Type: application/json' \
-  | jq "${only_names}"
+    )"
+
+  checks_errors_in_response "$roles"
+  echo "$roles" | jq "${only_names}"
 }
 
 add_user(){
-  # --full-name FULL_NAME] [--email EMAIL] USER_NAME PASSWORD ROL1 ... ROLn
+  rm -f /tmp/output_error
 
   local full_name=""
   local email=""
@@ -558,12 +589,14 @@ EOF
     -XPOST "${ES_ENTRY_POINT}/_xpack/security/user/$name" \
     -H 'Content-Type: application/json' \
     -d "@$tempFile" \
-  | jq
+  2>> /tmp/output_error | tee -a /tmp/output_error
 
   rm -f "$tempFile"
+  checks_errors_in_response
 }
 
 add_role(){
+  rm -f /tmp/output_error
 
   # Load role name specificatoin
   local name="$1"
@@ -584,7 +617,9 @@ add_role(){
   curl -sL \
     -XPOST "${ES_ENTRY_POINT}/_xpack/security/role/$name" \
     -H 'Content-Type: application/json' \
-    -d "${role_data}"
+    -d "${role_data}" \
+  2>> /tmp/output_error | tee -a /tmp/output_error
+  checks_errors_in_response
 }
 
 wait_for_service_up(){
@@ -597,6 +632,33 @@ wait_for_service_up(){
       echo "Waiting till services $WAIT_FOR_SERVICE_UP are accessible (or timeout: $WAIT_FOR_SERVICE_UP_TIMEOUT)"
       dockerize $services -timeout "$WAIT_FOR_SERVICE_UP_TIMEOUT"
     fi
+}
+
+##
+##
+# $1 text to search on "unauthorized message", if empty we look on /tmp/output_error file
+#
+checks_errors_in_response(){
+  if [ "yes" == "$CHECK_ERRORS_IN_RESPOSE" ]
+  then
+    local data=""
+    if [ -z "$1" ]
+    then
+      data="$(cat /tmp/output_error)"
+    else
+      data="$1"
+    fi
+
+    if echo "$data" | fgrep '"status"' | fgrep "401" > /dev/null
+    then
+      echo "Error: Unauthorized error response on $data"
+      exit 1
+    elif echo "$data" | fgrep '"error"' > /dev/null
+    then
+      echo "Error: 'error' word found on $data response"
+      exit 1
+    fi
+  fi
 }
 
 case $1 in
