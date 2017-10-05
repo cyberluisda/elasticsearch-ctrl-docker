@@ -7,6 +7,7 @@ ES_ENTRY_POINT="${ES_ENTRY_POINT:-http://elastic-search:9200}"
 WAIT_FOR_SERVICE_UP="${WAIT_FOR_SERVICE_UP}"
 WAIT_FOR_SERVICE_UP_TIMEOUT="${WAIT_FOR_SERVICE_UP_TIMEOUT:-10s}"
 CHECK_ERRORS_IN_RESPOSE="${CHECK_ERRORS_IN_RESPOSE:-yes}"
+CURL_COMMON_OPTIONS="${CURL_COMMON_OPTIONS:--k}"
 
 
 usage() {
@@ -140,18 +141,21 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
         CHECK_ERRORS_IN_RESPOSE. If is \"yes\" (default) some errors like unauthorized
           access are checked on response of some commands and exit with error code if
           applied.
+
+        CURL_COMMON_OPTIONS. Command line options to add in all curl executions.
+          By default set "-k"
 "
 }
 
 list_indexes() {
   rm -f /tmp/output_error
-  curl "${ES_ENTRY_POINT}/_cat/indices?v" 2>> /tmp/output_error | tee -a /tmp/output_error
+  curl ${CURL_COMMON_OPTIONS} "${ES_ENTRY_POINT}/_cat/indices?v" 2>> /tmp/output_error | tee -a /tmp/output_error
   checks_errors_in_response
 }
 
 delete_index() {
   rm -f /tmp/output_error
-  curl -XDELETE "${ES_ENTRY_POINT}/$1" 2>> /tmp/output_error | tee -a /tmp/output_error | jq .
+  curl ${CURL_COMMON_OPTIONS} -XDELETE "${ES_ENTRY_POINT}/$1" 2>> /tmp/output_error | tee -a /tmp/output_error | jq .
   checks_errors_in_response
 }
 
@@ -181,10 +185,10 @@ create_index() {
     then
       echo "Index ${index_name} exists, ignoring"
     else
-      curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>> /tmp/output_error | tee -a /tmp/output_error | jq .
+      curl ${CURL_COMMON_OPTIONS} -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>> /tmp/output_error | tee -a /tmp/output_error | jq .
     fi
   else
-    curl -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>> /tmp/output_error | tee -a /tmp/output_error | jq .
+    curl ${CURL_COMMON_OPTIONS} -XPUT "${ES_ENTRY_POINT}/${index_name}" -d "@${schema_path}" 2>> /tmp/output_error | tee -a /tmp/output_error | jq .
   fi
   checks_errors_in_response
 }
@@ -295,7 +299,7 @@ list_schemas() {
 
 list_aliases() {
   rm -f /tmp/output_error
-  curl "${ES_ENTRY_POINT}/_cat/aliases?v" 2>> /tmp/output_error | tee -a /tmp/output_error
+  curl ${CURL_COMMON_OPTIONS} "${ES_ENTRY_POINT}/_cat/aliases?v" 2>> /tmp/output_error | tee -a /tmp/output_error
   checks_errors_in_response
 }
 
@@ -321,12 +325,12 @@ create_alias(){
     then
       echo "Alias ${name} exists, ignoring"
     else
-      curl -XPOST "${ES_ENTRY_POINT}/_aliases" -H 'Content-Type: application/json' -d \
+      curl ${CURL_COMMON_OPTIONS} -XPOST "${ES_ENTRY_POINT}/_aliases" -H 'Content-Type: application/json' -d \
         "{ \"actions\" : [ { \"add\" : { \"index\" : \"${indice}\", \"alias\" : \"${name}\" } } ] }" \
       2>> /tmp/output_error | tee -a /tmp/output_error | jq .
     fi
   else
-    curl -XPOST "${ES_ENTRY_POINT}/_aliases" -H 'Content-Type: application/json' -d \
+    curl ${CURL_COMMON_OPTIONS} -XPOST "${ES_ENTRY_POINT}/_aliases" -H 'Content-Type: application/json' -d \
       "{ \"actions\" : [ { \"add\" : { \"index\" : \"${indice}\", \"alias\" : \"${name}\" } } ] }" \
     2>> /tmp/output_error | tee -a /tmp/output_error | jq .
   fi
@@ -400,6 +404,7 @@ add_license(){
   fi
 
   curl \
+    ${CURL_COMMON_OPTIONS} \
     -XPOST "${ES_ENTRY_POINT}/_xpack/license${acknowledge}" \
     -H 'Content-Type: application/json' \
     -d "${license_data}" \
@@ -409,7 +414,7 @@ add_license(){
 }
 
 get_license(){
-  local license="$(curl -sL -XGET "${ES_ENTRY_POINT}/_xpack/license")"
+  local license="$(curl ${CURL_COMMON_OPTIONS} -sL -XGET "${ES_ENTRY_POINT}/_xpack/license")"
   checks_errors_in_response "$license"
   echo "$license" | jq .
 }
@@ -459,7 +464,7 @@ change_password(){
     local old_entry_point=$(echo "${ES_ENTRY_POINT}" | sed -re "s|(https?://)(\w+:\w+@)?([a-zA-Z\.:0-9/_\-]+)|\1${old_user}:${old_password}@\3|")
 
     # If old user is unauthorized exit without error
-    if curl -s "$old_entry_point" | fgrep '"status":401' > /dev/null
+    if curl ${CURL_COMMON_OPTIONS} -s "$old_entry_point" | fgrep '"status":401' > /dev/null
     then
       echo "Info. Old user password now is unauthorized, nothing to do"
       exit 0
@@ -467,6 +472,7 @@ change_password(){
   fi
 
   curl \
+    ${CURL_COMMON_OPTIONS} \
     -XPUT "${ES_ENTRY_POINT}/_xpack/security/user/${user}/_password" \
     -H 'Content-Type: application/json' \
     -d "{\"password\": \"${passwd}\"}" \
@@ -482,7 +488,7 @@ list_users(){
     only_names="."
   fi
 
-  local users="$(curl -sL \
+  local users="$(curl ${CURL_COMMON_OPTIONS} -sL \
     -XGET "${ES_ENTRY_POINT}/_xpack/security/user" \
     -H 'Content-Type: application/json' \
     )"
@@ -498,7 +504,7 @@ list_roles(){
     only_names="."
   fi
 
-  local roles="$(curl -sL \
+  local roles="$(curl ${CURL_COMMON_OPTIONS} -sL \
     -XGET "${ES_ENTRY_POINT}/_xpack/security/role" \
     -H 'Content-Type: application/json' \
     )"
@@ -587,7 +593,9 @@ add_user(){
 }
 EOF
 
-  curl -sL \
+  curl \
+    ${CURL_COMMON_OPTIONS} \
+    -sL \
     -XPOST "${ES_ENTRY_POINT}/_xpack/security/user/$name" \
     -H 'Content-Type: application/json' \
     -d "@$tempFile" \
@@ -616,7 +624,9 @@ add_role(){
     exit 1
   fi
 
-  curl -sL \
+  curl \
+    ${CURL_COMMON_OPTIONS} \
+    -sL \
     -XPOST "${ES_ENTRY_POINT}/_xpack/security/role/$name" \
     -H 'Content-Type: application/json' \
     -d "${role_data}" \
