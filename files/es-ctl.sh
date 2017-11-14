@@ -147,6 +147,20 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
 "
 }
 
+config_cheks(){
+    if [ -z "$ES_ENTRY_POINT" ]; then
+      printf "~~~~~~~~~~~~~~~~~~~~~~~~~~~~ WARNING !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      printf " ES_ENTRY_POINT environment var is empty\n"
+      printf "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+    fi
+    if [ "$(echo -n "$ES_ENTRY_POINT" | tail -c 1)" == "/" ]; then
+      printf "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ WARNING !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      printf " ES_ENTRY_POINT ends with '/' character. This can lead to curl parsing errors. For example:\n"
+      printf " 'parse error: Invalid numeric literal at line 1, column 3'\n"
+      printf "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+    fi
+}
+
 list_indexes() {
   rm -f /tmp/output_error
   curl ${CURL_COMMON_OPTIONS} "${ES_ENTRY_POINT}/_cat/indices?v" 2>> /tmp/output_error | tee -a /tmp/output_error
@@ -675,31 +689,37 @@ checks_errors_in_response(){
 
 case $1 in
   list-idxs)
+    config_cheks
     wait_for_service_up
     list_indexes
     ;;
   create-idx)
     shift
+    config_cheks
     wait_for_service_up
     create_index $@
     ;;
   create-idxs)
     shift
+    config_cheks
     wait_for_service_up
     create_indexes $@
     ;;
   create-all)
     shift
+    config_cheks
     wait_for_service_up
     create_all $@
     ;;
   delete-idx)
     shift
+    config_cheks
     wait_for_service_up
     delete_index $@
     ;;
   delete-idxs)
     shift
+    config_cheks
     wait_for_service_up
     delete_indexes $@
     ;;
@@ -708,52 +728,62 @@ case $1 in
     list_schemas
     ;;
   list-aliases)
+    config_cheks
     wait_for_service_up
     list_aliases
     ;;
   create-alias)
     shift
+    config_cheks
     wait_for_service_up
     create_alias $@
     ;;
   create-aliases)
     shift
+    config_cheks
     wait_for_service_up
     create_aliases $@
     ;;
   add-license)
     shift
+    config_cheks
     wait_for_service_up
     # Pass up to parameters escaped because one of then is JSON with spaces
     add_license "$@"
     ;;
   get-license)
     shift
+    config_cheks
     wait_for_service_up
     get_license $@
     ;;
   change-password)
     shift
+    config_cheks
     wait_for_service_up
     change_password $@
     ;;
   list-users)
     shift
+    config_cheks
     wait_for_service_up
     list_users $@
     ;;
   list-roles)
     shift
+    config_cheks
     wait_for_service_up
     list_roles $@
     ;;
   add-user)
     shift
+    config_cheks
     wait_for_service_up
     add_user "$@"
     ;;
   add-role)
     shift
+    config_cheks
     wait_for_service_up
     add_role "$@"
     ;;
