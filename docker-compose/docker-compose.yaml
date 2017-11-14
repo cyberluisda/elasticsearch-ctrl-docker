@@ -11,6 +11,16 @@ services:
       elastic-search:
         condition: service_started
 
+  es-ctl-warning:
+    build: ..
+    environment:
+      WAIT_FOR_SERVICE_UP: tcp://elastic-search:9200
+      WAIT_FOR_SERVICE_UP_TIMEOUT: 120s
+      ES_ENTRY_POINT: http://elastic:changeme@elastic-search:9200/
+    depends_on:
+      elastic-search:
+        condition: service_started
+
   elastic-search:
     image: cyberluisda/elasticsearch-kubernetes:5.6.0-xpack
     privileged: true
