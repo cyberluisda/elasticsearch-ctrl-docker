@@ -14,41 +14,51 @@ usage() {
     echo "
 es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options}
   list-schms : list allowed schema configuration files
+
   list-idxs : list all idexes
+
   delete-idx : delete a index
     options: NAME
       NAME : the name of index to remove
+
   create-idx : create a index
     options: NAME [--safe-mode] [SCHEMA_PATH]
       NAME : the name of the index to create
       --safe-mode : Apply only if index does not exists
       SCHEMA_PATH : json file wiht schema definition. If not defined
         /etc/es-ctl/\${NAME}.es.schema.json will be used
+
   create-idxs : create multiple index
     options: [--safe-mode] NAME1 [-p PATH1] [-a ALIAS1] ... NAMEn [-p PATHn] [-a ALIASn]
       --safe-mode : Apply only if index does not exists
       NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/\${NAMEx}.es.schema.json by default
       PATHx : Use this path fot this index instead of /etc/es-ctl/\${NAMEx}.es.schema.json
       ALIASx: If defined create alias pointed to this index.
+
   create-all : create all indexes infering name of index from Schmema file name.
     All flies which path follow /etc/es-ctl/\${NAME}.es.schema.json pattern, will used to create index.
     options: [--safe-mode]
       --safe-mode : Apply only if index does not exists
+
   delete-idxs : delte multiple index
     options: [--force] NAME1 ... NAMEn
       --force : Do not ask for confirmation
       NAMEx : the name of the index to create. Schema path used will be /etc/es-ctl/\${NAME}.es.schema.json
+
   list-aliases : list all aliases
+
   create-alias : create one alias
     options: [--safe-mode] NAME INDICE_NAME
       --safe-mode : Apply only if alias does not exists.
       NAME : the name of the alias to create.
       INDICE_NAME : the name of the indice to be pointed by alias.
+
   create-aliases : create multiple aliases
     options: [--safe-mode] NAME1 INDICE_NAME1 ... NAMEn INDICE_NAMEn
       --safe-mode : Apply only if alias does not exists.
       NAMEx : the name of the alias to create.
       INDICE_NAMEx : the name of the indice to be pointed by alias.
+
   add-license: Add lincense to a cluster (cluster must have x-pack plugin installed)
     options: [--force-if-exists] [--no-acknowledge] LICENSE_AS_JSON
       --force-if-exists: If there is one license in cluster, with this option command
@@ -56,6 +66,7 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
       --no-acknowledge: By default acknowledge parameter with true value is sent
         when license is put, with this option paramter is removed from query.
       LICENSE_AS_JSON: String in JSON format with license data
+
   get-license: List current license
 
   change-password: Change password for a user. Xpack plugin is required
@@ -110,40 +121,42 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
       NAME: Name of te roles
       ROLE_SPEC_JSON: Role specification in json format
 
-    ENVIRONMENT CONFIGURATION.
-      There are some configuration and behaviours that can be set using next Environment
-      Variables:
 
-        ES_ENTRY_POINT. Entry point of Elastic Search REST API. Default: http://elastfic-search:9200
-          If you need set user password with basic authentication (only one mode supported)
-          you shoul set here user and password (as estandar URL way).
 
-        ZOOKEEPER_ENTRY_POINT. Define zookeeper entry point. By default: zookeeper:2181
+  ENVIRONMENT CONFIGURATION.
+    There are some configuration and behaviours that can be set using next Environment
+    Variables:
 
-        KAFKA_BROKER_LIST. Define kafka bootstrap server entry points. By default:
-          kafka:9092
+      ES_ENTRY_POINT. Entry point of Elastic Search REST API. Default: http://elastfic-search:9200
+        If you need set user password with basic authentication (only one mode supported)
+        you shoul set here user and password (as estandar URL way).
 
-        WAIT_FOR_SERVICE_UP. If it is defined we wait (using dockerize) for service(s)
-          to be started before to perform any operation. Example values:
+      ZOOKEEPER_ENTRY_POINT. Define zookeeper entry point. By default: zookeeper:2181
 
-          WAIT_FOR_SERVICE_UP=\"tcp://kafka:9092\" wait for tcp connection to kafka:9092
-          are available
+      KAFKA_BROKER_LIST. Define kafka bootstrap server entry points. By default:
+        kafka:9092
 
-          WAIT_FOR_SERVICE_UP=\"tcp://kafka:9092 tcp://zookeeper:2181\" Wait for
-          kafka:9092 and zookeeper:2818 connections are avilable.
+      WAIT_FOR_SERVICE_UP. If it is defined we wait (using dockerize) for service(s)
+        to be started before to perform any operation. Example values:
 
-          If one of this can not be process will exit with error will be. See
-          https://github.com/jwilder/dockerize for more information.
+        WAIT_FOR_SERVICE_UP=\"tcp://kafka:9092\" wait for tcp connection to kafka:9092
+        are available
 
-        WAIT_FOR_SERVICE_UP_TIMEOUT. Set timeot when check services listed on
-          WAIT_FOR_SERVICE_UP. Default value 10s
+        WAIT_FOR_SERVICE_UP=\"tcp://kafka:9092 tcp://zookeeper:2181\" Wait for
+        kafka:9092 and zookeeper:2818 connections are avilable.
 
-        CHECK_ERRORS_IN_RESPOSE. If is \"yes\" (default) some errors like unauthorized
-          access are checked on response of some commands and exit with error code if
-          applied.
+        If one of this can not be process will exit with error will be. See
+        https://github.com/jwilder/dockerize for more information.
 
-        CURL_COMMON_OPTIONS. Command line options to add in all curl executions.
-          By default set "-k"
+      WAIT_FOR_SERVICE_UP_TIMEOUT. Set timeot when check services listed on
+        WAIT_FOR_SERVICE_UP. Default value 10s
+
+      CHECK_ERRORS_IN_RESPOSE. If is \"yes\" (default) some errors like unauthorized
+        access are checked on response of some commands and exit with error code if
+        applied.
+
+      CURL_COMMON_OPTIONS. Command line options to add in all curl executions.
+        By default set \"-k\"
 "
 }
 
