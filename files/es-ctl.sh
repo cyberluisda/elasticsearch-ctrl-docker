@@ -131,6 +131,10 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
       -e DEFINITION: Use 'DEFINITION' as body of template (json format)
       -f DEFINITION_JSON_FILE: Use 'DEFINITION_JSON_FILE' file as body of template
 
+  delete-templates: Delete templates
+    options: NAME_PATTERN
+      NAME_PATTERN: Elastic search pattern for templates to delete
+
   ENVIRONMENT CONFIGURATION.
     There are some configuration and behaviours that can be set using next Environment
     Variables:
@@ -729,6 +733,24 @@ add_template(){
   checks_errors_in_response
 }
 
+delete_templates(){
+  rm -f /tmp/output_error
+
+  local name="$1"
+  if [ "$1" == "" ]
+  then
+    echo "Error delete-template without name"
+    exit 1
+  fi
+
+  curl \
+    ${CURL_COMMON_OPTIONS} \
+    -sL \
+    -XDELETE "${ES_ENTRY_POINT}/_template/${name}" \
+  2>> /tmp/output_error | tee -a /tmp/output_error | jq "."
+  checks_errors_in_response
+}
+
 wait_for_service_up(){
     if [ -n "$WAIT_FOR_SERVICE_UP" ]; then
       local services=""
@@ -879,6 +901,12 @@ case $1 in
     config_cheks
     wait_for_service_up
     add_template "$@"
+    ;;
+  delete-templates)
+    shift
+    config_cheks
+    wait_for_service_up
+    delete_templates "$@"
     ;;
   *)
     usage
