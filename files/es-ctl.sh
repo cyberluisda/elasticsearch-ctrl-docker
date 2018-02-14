@@ -705,12 +705,12 @@ add_template(){
     fi
     template_data="$3"
   elif [ "$2" == "-f" ]
+  then
     if [ ! -f "$3" ]
     then
       echo "Error add-templte -f without file as a third argument"
     fi
     template_data="$(cat "$3")"
-  then
   fi
 
   if [ "" == "${template_data}" ]
@@ -873,11 +873,13 @@ case $1 in
     config_cheks
     wait_for_service_up
     list_templates "$@"
+    ;;
   add-template)
     shift
     config_cheks
     wait_for_service_up
     add_template "$@"
+    ;;
   *)
     usage
     exit 1
