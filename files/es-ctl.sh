@@ -121,6 +121,9 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
       NAME: Name of te roles
       ROLE_SPEC_JSON: Role specification in json format
 
+  list-templates: List all templates with definition.
+    options: [-d]
+      -d: Show definition (body) for each template
 
 
   ENVIRONMENT CONFIGURATION.
@@ -661,6 +664,23 @@ add_role(){
   checks_errors_in_response
 }
 
+list_templates(){
+  rm -f /tmp/output_error
+
+  local jq_filter=". | keys"
+  if [ "$1" == "-d" ]
+  then
+    jq_filter="."
+  fi
+
+  curl \
+    ${CURL_COMMON_OPTIONS} \
+    -sL \
+    -XGET "${ES_ENTRY_POINT}/_template" \
+  2>> /tmp/output_error | tee -a /tmp/output_error | jq "${jq_filter}"
+  checks_errors_in_response
+}
+
 wait_for_service_up(){
     if [ -n "$WAIT_FOR_SERVICE_UP" ]; then
       local services=""
@@ -800,6 +820,11 @@ case $1 in
     wait_for_service_up
     add_role "$@"
     ;;
+  list-templates)
+    shift
+    config_cheks
+    wait_for_service_up
+    list_templates "$@"
   *)
     usage
     exit 1
