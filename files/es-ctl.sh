@@ -125,6 +125,11 @@ es-ctl list-schms|list-idxs|remove-idx|create-idx {options}|create-idxs {options
     options: [-d]
       -d: Show definition (body) for each template
 
+  add-template: Add (or update) template
+    options: NAME [-e DEFINITION | -f DEFINITON_JSON_FILE]
+      NAME: name of the template
+      -e DEFINITION: Use 'DEFINITION' as body of template (json format)
+      -f DEFINITION_JSON_FILE: Use 'DEFINITION_JSON_FILE' file as body of template
 
   ENVIRONMENT CONFIGURATION.
     There are some configuration and behaviours that can be set using next Environment
@@ -681,6 +686,49 @@ list_templates(){
   checks_errors_in_response
 }
 
+add_template(){
+  rm -f /tmp/output_error
+
+  local name="$1"
+  if [ "$1" == "" ]
+  then
+    echo "Error add-template without name"
+    exit 1
+  fi
+
+  local template_data=""
+  if [ "$2" == "-e" ]
+  then
+    if [ "$3" == "" ]
+    then
+      echo "Error add-template -e with empty value for especification"
+    fi
+    template_data="$3"
+  elif [ "$2" == "-f" ]
+    if [ ! -f "$3" ]
+    then
+      echo "Error add-templte -f without file as a third argument"
+    fi
+    template_data="$(cat "$3")"
+  then
+  fi
+
+  if [ "" == "${template_data}" ]
+  then
+    echo "Error add-template without template specification"
+    exit 1
+  fi
+
+  curl \
+    ${CURL_COMMON_OPTIONS} \
+    -sL \
+    -XPUT "${ES_ENTRY_POINT}/_template" \
+    -H 'Content-Type: application/json' \
+    -d "${template_data}" \
+  2>> /tmp/output_error | tee -a /tmp/output_error | jq "${jq_filter}"
+  checks_errors_in_response
+}
+
 wait_for_service_up(){
     if [ -n "$WAIT_FOR_SERVICE_UP" ]; then
       local services=""
@@ -825,6 +873,11 @@ case $1 in
     config_cheks
     wait_for_service_up
     list_templates "$@"
+  add-template)
+    shift
+    config_cheks
+    wait_for_service_up
+    add_template "$@"
   *)
     usage
     exit 1
