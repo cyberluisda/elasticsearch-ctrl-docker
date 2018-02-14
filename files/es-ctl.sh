@@ -722,7 +722,7 @@ add_template(){
   curl \
     ${CURL_COMMON_OPTIONS} \
     -sL \
-    -XPUT "${ES_ENTRY_POINT}/_template" \
+    -XPUT "${ES_ENTRY_POINT}/_template/${name}" \
     -H 'Content-Type: application/json' \
     -d "${template_data}" \
   2>> /tmp/output_error | tee -a /tmp/output_error | jq "${jq_filter}"
