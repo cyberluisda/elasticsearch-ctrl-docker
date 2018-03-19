@@ -773,7 +773,12 @@ checks_errors_in_response(){
     local data=""
     if [ -z "$1" ]
     then
-      data="$(cat /tmp/output_error)"
+      if [ -f /tmp/output_error ]
+      then
+        data="$(cat /tmp/output_error)"
+      else
+        echo "Warning: Empty response or /tmp/output_error file does not exists, when checks_errors_in_response"
+      fi
     else
       data="$1"
     fi

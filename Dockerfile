@@ -8,8 +8,7 @@ RUN curl -L https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VE
     | tar -C /usr/local/bin -xzvf -
 
 # Add jq and other software base
-RUN apk --update add jq \
-  && rm -fr /var/cache/apk/*
+RUN apk --no-cache add jq
 
 ADD files/es-ctl.sh /bin
 RUN chmod a+x /bin/es-ctl.sh
